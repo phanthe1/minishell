@@ -179,46 +179,60 @@ void clearArgs(){
 
 //Check for file Redirection
 void fileRedirection(){
-    int result;
+    int resultForeground;
+    int resultBackgroundOut;
+    int resultBackgroundIn;
+
     for(int i = 0; i < argSize; i++){
-        printf("IS IT HERE");
         if((strcmp(argList[i], ">") == 0) || (strcmp(argList[i], "<") == 0)){
-            if(strcmp(argList[i], ">") == 0){
-                // printf("OUTPUT HERE\n");
-                strcpy(outputFileName, argList[i+1]); //gets output filename only
-                // printf("OUTPUT FILE NAME: %s\n", outputFileName);
-                targetFD = open(outputFileName, O_WRONLY | O_CREAT | O_TRUNC, 0640);
-                //Error in opening output file
-                if(targetFD == 1){
-                    perror("target open()");
+            if(background == 1){
+                targetFD = open("/dev/null", O_RDONLY);
+                resultBackgroundOut = dup2(targetFD, STDOUT_FILENO);
+                resultBackgroundIn = dup2(targetFD, STDIN_FILENO);
+                
+                if(resultBackgroundOut == -1 || resultBackgroundIn == -1){
+                    perror("Error directing");
                     exit(1);
                 }
-                // printf("targetFD: %d", targetFD);
-                result = dup2(targetFD, STDOUT_FILENO);
-                if(result == -1){
-                    perror("target dup2");
-                    exit(2);
-                }
-                // printf("result: %d", result);
-                redirection = true; //Redirection occurs
             }
             else{
-                printf("ENTER HERE >");
-                // printf("INPUT HERE\n");
-                strcpy(inputFileName, argList[i+1]); //copy the string in the next index into inputFileName
-                targetFD = open(inputFileName, O_RDONLY); //open file
-                //error in opening file
-                if(targetFD == 1){
-                    perror("source open()");
-                    exit(1);
+                if(strcmp(argList[i], ">") == 0){
+                    // printf("OUTPUT HERE\n");
+                    strcpy(outputFileName, argList[i+1]); //gets output filename only
+                    // printf("OUTPUT FILE NAME: %s\n", outputFileName);
+                    targetFD = open(outputFileName, O_WRONLY | O_CREAT | O_TRUNC, 0640);
+                    //Error in opening output file
+                    if(targetFD == 1){
+                        perror("target open()");
+                        exit(1);
+                    }
+                    // printf("targetFD: %d", targetFD);
+                    resultForeground = dup2(targetFD, STDOUT_FILENO);
+                    if(resultForeground == -1){
+                        perror("target dup2");
+                        exit(2);
+                    }
+                    // printf("resultForeground: %d", resultForeground);
+                    redirection = true; //Redirection occurs
                 }
-                result = dup2(targetFD, STDIN_FILENO);
-                //erro
-                if(result == -1){
-                    perror("source dup2");
-                    exit(2);
+                else{
+                    printf("ENTER HERE >");
+                    // printf("INPUT HERE\n");
+                    strcpy(inputFileName, argList[i+1]); //copy the string in the next index into inputFileName
+                    targetFD = open(inputFileName, O_RDONLY); //open file
+                    //error in opening file
+                    if(targetFD == 1){
+                        perror("source open()");
+                        exit(1);
+                    }
+                    resultForeground = dup2(targetFD, STDIN_FILENO);
+                    //erro
+                    if(resultForeground == -1){
+                        perror("source dup2");
+                        exit(2);
+                    }
+                    redirection = true;
                 }
-                redirection = true;
             }
             fcntl(targetFD, F_SETFD, FD_CLOEXEC);
         }
